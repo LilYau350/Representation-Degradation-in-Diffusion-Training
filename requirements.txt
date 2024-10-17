@@ -1,0 +1,7 @@
+scipy
+requests
+tqdm
+timm==0.6.12
+blobfile
+einops
+diffusers

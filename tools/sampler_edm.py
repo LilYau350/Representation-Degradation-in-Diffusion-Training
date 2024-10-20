@@ -25,6 +25,7 @@ class Net(torch.nn.Module):
         C_2             = 0.008,            # Timestep adjustment at high noise levels.
         M               = 1000,             # Original number of timesteps in the DDPM formulation.
         noise_schedule  = 'optim',
+        k = 2.0,
         # model_type      = 'DhariwalUNet',   # Class name of the underlying model.
         # **model_kwargs,                     # Keyword arguments for the underlying model.
     ):
@@ -39,7 +40,7 @@ class Net(torch.nn.Module):
         # self.model = globals()[model_type](img_resolution=img_resolution, in_channels=img_channels, out_channels=img_channels*2, label_dim=label_dim, **model_kwargs)
         self.model = model
         self.noise_schedule = noise_schedule
-
+        self.k = k
         u = torch.zeros(M + 1)
         for j in range(M, 0, -1): # M, ..., 1
             u[j - 1] = ((u[j] ** 2 + 1) / (self.alpha_bar(j - 1) / self.alpha_bar(j)).clip(min=C_1) - 1).sqrt()
@@ -104,7 +105,7 @@ class Net(torch.nn.Module):
         elif self.noise_schedule == 'optim':
             j = torch.as_tensor(j)
             t = np.linspace(0, self.M, self.M + 1, dtype=np.float64)
-            betas = 0.0001 + (0.02 - 0.0001) * ((t) / self.M) ** 2
+            betas = 0.0001 + (0.02 - 0.0001) * ((t) / self.M) ** self.k
             alphas = 1.0 - betas
             alphas_cumprod = np.cumprod(alphas, axis=0)
             return alphas_cumprod[self.M - j]

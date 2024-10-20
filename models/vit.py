@@ -446,7 +446,7 @@ class ViT(nn.Module):
         x = self.patch_embed(x)
         B, L, C = x.size()
         
-        #timesteps = timesteps.long() #ensure timesteps are longtensor
+        timesteps = timesteps.long() #ensure timesteps are longtensor
         time_tokens = self.time_embedding(timesteps).unsqueeze(1)
 
         if y is not None:

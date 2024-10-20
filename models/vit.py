@@ -547,21 +547,21 @@ class ViT(nn.Module):
 #                                   ViT Configs                                  #
 #################################################################################
 
-def ViT_S(image_size, patch_size, num_classes, in_channels, drop_label_prob, **kwargs):
+def ViT_S(image_size, patch_size, num_classes, in_channels, drop_rate, drop_label_prob, **kwargs):
     return ViT(image_size=image_size, patch_size=patch_size, embed_dim=512, depth=13, num_heads=4, mlp_ratio=4, 
-               num_classes=num_classes, in_channels=in_channels, drop_label_prob=drop_label_prob, **kwargs)
+               num_classes=num_classes, in_channels=in_channels, drop_rate=drop_rate, drop_label_prob=drop_label_prob, **kwargs)
 
-def ViT_B(image_size, patch_size, num_classes, in_channels, drop_label_prob, **kwargs):
+def ViT_B(image_size, patch_size, num_classes, in_channels, drop_rate, drop_label_prob, **kwargs):
     return ViT(image_size=image_size, patch_size=patch_size, embed_dim=768, depth=12, num_heads=12, mlp_ratio=4, 
-               num_classes=num_classes, in_channels=in_channels, drop_label_prob=drop_label_prob, **kwargs)
+               num_classes=num_classes, in_channels=in_channels, drop_rate=drop_rate, drop_label_prob=drop_label_prob, **kwargs)
 
-def ViT_L(image_size, patch_size, num_classes, in_channels, drop_label_prob, **kwargs):
+def ViT_L(image_size, patch_size, num_classes, in_channels, drop_rate, drop_label_prob, **kwargs):
     return ViT(image_size=image_size, patch_size=patch_size, embed_dim=1024, depth=21, num_heads=16, mlp_ratio=4, 
-               num_classes=num_classes, in_channels=in_channels, drop_label_prob=drop_label_prob,  **kwargs)
+               num_classes=num_classes, in_channels=in_channels, drop_rate=drop_rate, drop_label_prob=drop_label_prob,  **kwargs)
 
-def ViT_XL(image_size, patch_size, num_classes, in_channels, drop_label_prob, **kwargs):
+def ViT_XL(image_size, patch_size, num_classes, in_channels, drop_rate, drop_label_prob, **kwargs):
     return ViT(image_size=image_size, patch_size=patch_size, embed_dim=1152, depth=28, num_heads=16, mlp_ratio=4, 
-               num_classes=num_classes, in_channels=in_channels, drop_label_prob=drop_label_prob,  **kwargs)
+               num_classes=num_classes, in_channels=in_channels, drop_rate=drop_rate, drop_label_prob=drop_label_prob,  **kwargs)
 
 
 UViT_models = {

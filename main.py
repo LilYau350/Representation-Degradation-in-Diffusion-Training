@@ -58,15 +58,16 @@ def parse_args():
     parser.add_argument("--eval", default=True, type=str2bool, help="Load checkpoint and evaluate FID...")
     parser.add_argument("--data_dir", type=str, default='./data', help="Path to the dataset directory")
     parser.add_argument("--dataset", type=str, default='CIFAR-10', choices=['CIFAR-10', 'ImageNet', 'LSUN', 'Encoded_ImageNet'], help="Dataset to train on")
-    parser.add_argument("--patch_size", type=int, default=None, help="Patch Size for ViT, DiT, U-ViT")
+    parser.add_argument("--patch_size", type=int, default=2, help="Patch Size for ViT, DiT, U-ViT")
     parser.add_argument("--in_chans", type=int, default=3, help="Number of input channels for the model")
     parser.add_argument("--image_size", type=int, default=32, help="Image size")
     parser.add_argument("--num_classes", type=int, default=10, help="num of classes")
-    parser.add_argument("--model", type=str, default="UNet-32", choices=model_variants, help="Model variant to use")
+    parser.add_argument("--model", type=str, default="ViT-S", choices=model_variants, help="Model variant to use")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
     
     # Gaussian Diffusion
     parser.add_argument("--beta_schedule", type=str, default='optim', choices=['linear', 'cosine', 'optim'] ,help="Beta schedule type")
+    parser.add_argument('--k', type=float, default=2.0, help='The parameter k for optim beta schedule.')
     parser.add_argument("--beta_1", type=float, default=1e-4, help="Starting value of beta for the diffusion process")
     parser.add_argument("--beta_T", type=float, default=0.2, help="Ending value of beta for the diffusion process")
     parser.add_argument("--T", type=int, default=1000, help="Number of diffusion steps")
@@ -82,7 +83,7 @@ def parse_args():
     parser.add_argument("--grad_clip", type=float, default=None, help="Gradient norm clipping")
     parser.add_argument("--dropout", type=float, default=0.1, help='dropout rate of resblock')
     parser.add_argument('--drop_label_prob', type=float, default=0.1, help='Probability of dropping labels for classifier-free guidance')
-    parser.add_argument("--total_steps", type=int, default=400000, help="Total training steps")
+    parser.add_argument("--total_steps", type=int, default=800000, help="Total training steps")
     parser.add_argument("--warmup_steps", type=int, default=5000, help="Learning rate warmup")
     parser.add_argument("--batch_size", type=int, default=128, help="Batch size for training")
     parser.add_argument("--num_workers", type=int, default=4, help="Number of workers for DataLoader")
@@ -96,12 +97,12 @@ def parse_args():
     
     # Logging & Sampling
     parser.add_argument("--sampler", type=str, default="heun", choices=["ddim", "heun"], help="Choose sampler between 'ddim' and 'heun'")
-    parser.add_argument("--sample_timesteps", type=int, default=20, help="Number of sample diffusion steps")
+    parser.add_argument("--sample_timesteps", type=int, default=10, help="Number of sample diffusion steps")
     parser.add_argument("--logdir", type=str, default='./logs', help="Log directory")
     parser.add_argument("--sample_size", type=int, default=64, help="Sampling size of images")
     parser.add_argument("--sample_step", type=int, default=5000, help="Frequency of sampling")
     parser.add_argument("--use_classifier", type=str, default=None, help="Path to the pre-trained classifier model")
-    parser.add_argument('--guidance_scale', type=float, default=2.0, help='Scale factor for classifier-free guidance')
+    parser.add_argument('--guidance_scale', type=float, default=1.5, help='Scale factor for classifier-free guidance')
     
     # Evaluation
     parser.add_argument("--save_step", type=int, default=100000, help="Frequency of saving checkpoints, 0 to disable during training")
@@ -118,13 +119,18 @@ def save_checkpoint(model, optimizer, step, args, ema_model=None):
         os.makedirs(checkpoint_dir, exist_ok=True)
         state = {
             'model': model.state_dict(),
-            'ema_model': ema_model.state_dict(),
             'optimizer': optimizer.state_dict(),
             'step': step
         }
         if ema_model is not None:
             state['ema_model'] = ema_model.state_dict()
-        filename = os.path.join(checkpoint_dir, f'{args.loss_type}_{args.beta_schedule}_{step}.pth')
+        filename = f"{args.loss_type}_{args.beta_schedule}"
+        
+        if args.beta_schedule == "optim":
+            filename += f"_{args.k}"
+            
+        filename += f"_{step}.pth"
+        filename = os.path.join(checkpoint_dir, filename)
         torch.save(state, filename)
         print(f"Checkpoint saved: {filename}")
 
@@ -256,7 +262,7 @@ def build_model(args):
 
 def build_diffusion(args, use_ddim=False):
 
-    betas = get_named_beta_schedule(args.beta_schedule, args.T)
+    betas = get_named_beta_schedule(args.beta_schedule, args.T, args.k)
     
     if use_ddim and args.sample_timesteps < args.T:  
         timestep_respacing = f"ddim{args.sample_timesteps}"  # Use DDIM and specify the number of sampling steps.
@@ -317,33 +323,30 @@ def sync_ema_model(ema_model):
         
 def save_metrics_to_csv(args, eval_dir, metrics, step):
     params = (
-        f"dataset_{args.dataset}_"
-        f"model_{args.model}_"
-        f"lr_{args.lr}_"
+        f"{args.dataset}_{args.model}_"
+        + (f"patch_{args.patch_size}_" if args.patch_size else "")
+        + f"lr_{args.lr}_"
         f"dropout_{args.dropout}_"
-        f"sample_timesteps_{args.sample_timesteps}_"
-        f"beta_schedule_{args.beta_schedule}_"
-        f"loss_{args.loss_type}_"
+        f"drop_label_{args.drop_label_prob}_"
+        f"sample_t_{args.sample_timesteps}_"
+        f"cfg_{args.guidance_scale}_"
+        + (f"beta_sched_optim_{args.k}_" if args.beta_schedule == "optim" else f"beta_sched_{args.beta_schedule}_")
+        + f"loss_{args.loss_type}_"
         f"weight_{args.weight_type}_"
+        + (f"gradclip_{args.grad_clip}_" if args.grad_clip else "")
+        + ("cond_" if args.class_cond else "")
     )
-    
-    params += f"patch_{args.patch_size}_" if args.patch_size is not None else ""
-    params += f"gradclip_{args.grad_clip}_" if args.grad_clip is not None else ""
-    params += "parallel_" if args.parallel else ""
-    params += "class_cond_" if args.class_cond else ""
-    params += "amp_" if args.amp else ""
-  
-    params = re.sub(r'[^\w\-_\. ]', '_', params)
+
+    params = re.sub(r'[^\w\-_\. ]', '_', params).rstrip('_')
+
     csv_filename = os.path.join(eval_dir, f"{params}.csv")
     file_exists = os.path.isfile(csv_filename)
     
     with open(csv_filename, 'a', newline='') as csvfile:
         writer = csv.writer(csvfile)
         if not file_exists:
-            header = ['Step'] + list(metrics.keys())
-            writer.writerow(header)
-        row = [step] + list(metrics.values())
-        writer.writerow(row)
+            writer.writerow(['Step'] + list(metrics.keys()))
+        writer.writerow([step] + list(metrics.values()))
         
 def cond_fn(x, t, y=None,classifier=None, classifier_scale=1.0):
     assert y is not None  
@@ -445,7 +448,8 @@ def heun_sampler(args, model, sample_diffusion, num_samples, sample_size, image_
        
     net = Net(model=model, img_channels=args.in_chans, 
             img_resolution=image_size,  
-            noise_schedule=args.beta_schedule).cuda()
+            noise_schedule=args.beta_schedule,
+            k=args.k).cuda()
 
     while len(all_samples) * sample_size < num_samples:
         class_labels = None

@@ -58,16 +58,16 @@ def parse_args():
     parser.add_argument("--eval", default=True, type=str2bool, help="Load checkpoint and evaluate FID...")
     parser.add_argument("--data_dir", type=str, default='./data', help="Path to the dataset directory")
     parser.add_argument("--dataset", type=str, default='CIFAR-10', choices=['CIFAR-10', 'ImageNet', 'LSUN', 'Encoded_ImageNet'], help="Dataset to train on")
-    parser.add_argument("--patch_size", type=int, default=2, help="Patch Size for ViT, DiT, U-ViT")
+    parser.add_argument("--patch_size", type=int, default=None, help="Patch Size for ViT, DiT, U-ViT")
     parser.add_argument("--in_chans", type=int, default=3, help="Number of input channels for the model")
     parser.add_argument("--image_size", type=int, default=32, help="Image size")
     parser.add_argument("--num_classes", type=int, default=10, help="num of classes")
-    parser.add_argument("--model", type=str, default="ViT-S", choices=model_variants, help="Model variant to use")
+    parser.add_argument("--model", type=str, default="Unet-32", choices=model_variants, help="Model variant to use")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
     
     # Gaussian Diffusion
     parser.add_argument("--beta_schedule", type=str, default='optim', choices=['linear', 'cosine', 'optim'] ,help="Beta schedule type")
-    parser.add_argument('--k', type=float, default=2.0, help='The parameter k for optim beta schedule.')
+    parser.add_argument('--k', type=float, default=3.0, help='The parameter k for optim beta schedule.')
     parser.add_argument("--beta_1", type=float, default=1e-4, help="Starting value of beta for the diffusion process")
     parser.add_argument("--beta_T", type=float, default=0.2, help="Ending value of beta for the diffusion process")
     parser.add_argument("--T", type=int, default=1000, help="Number of diffusion steps")
@@ -81,9 +81,9 @@ def parse_args():
     parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
     parser.add_argument("--final_lr", type=float, default=1e-5, help="Final learning rate")
     parser.add_argument("--grad_clip", type=float, default=None, help="Gradient norm clipping")
-    parser.add_argument("--dropout", type=float, default=0.1, help='dropout rate of resblock')
+    parser.add_argument("--dropout", type=float, default=0.2, help='dropout rate of resblock')
     parser.add_argument('--drop_label_prob', type=float, default=0.1, help='Probability of dropping labels for classifier-free guidance')
-    parser.add_argument("--total_steps", type=int, default=800000, help="Total training steps")
+    parser.add_argument("--total_steps", type=int, default=400000, help="Total training steps")
     parser.add_argument("--warmup_steps", type=int, default=5000, help="Learning rate warmup")
     parser.add_argument("--batch_size", type=int, default=128, help="Batch size for training")
     parser.add_argument("--num_workers", type=int, default=4, help="Number of workers for DataLoader")
@@ -249,6 +249,7 @@ def build_model(args):
         patch_size=args.patch_size,
         num_classes=args.num_classes,
         in_channels=args.in_chans,
+        drop_rate=args.dropout, 
         drop_label_prob=args.drop_label_prob,  
         )
     else:

@@ -62,7 +62,7 @@ def parse_args():
     parser.add_argument("--in_chans", type=int, default=3, help="Number of input channels for the model")
     parser.add_argument("--image_size", type=int, default=32, help="Image size")
     parser.add_argument("--num_classes", type=int, default=10, help="num of classes")
-    parser.add_argument("--model", type=str, default="Unet-32", choices=model_variants, help="Model variant to use")
+    parser.add_argument("--model", type=str, default="UNet-32", choices=model_variants, help="Model variant to use")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
     
     # Gaussian Diffusion

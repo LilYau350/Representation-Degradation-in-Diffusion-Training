@@ -15,7 +15,7 @@ from tools.nn import mean_flat
 from tools.losses import normal_kl, discretized_gaussian_log_likelihood
 
 
-def get_named_beta_schedule(schedule_name, num_diffusion_timesteps):
+def get_named_beta_schedule(schedule_name, num_diffusion_timesteps, k):
     """
     Get a pre-defined beta schedule for the given name.
 
@@ -44,7 +44,7 @@ def get_named_beta_schedule(schedule_name, num_diffusion_timesteps):
         beta_start = scale * 0.0001
         beta_end = scale * 0.02
         t = np.linspace(0, num_diffusion_timesteps - 1, num_diffusion_timesteps)
-        beta_t = beta_start + (beta_end - beta_start) * ((t) / (num_diffusion_timesteps)) ** 2
+        beta_t = beta_start + (beta_end - beta_start) * ((t) / (num_diffusion_timesteps)) ** k
         return beta_t
     else:
         raise NotImplementedError(f"unknown beta schedule: {schedule_name}")

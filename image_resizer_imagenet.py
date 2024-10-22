@@ -3,6 +3,9 @@ from argparse import ArgumentParser
 import os
 from multiprocessing import Pool
 from tqdm import tqdm  
+import numpy as np
+import math
+import random
 
 # For older versions of Pillow, define Resampling as an alias for Image
 try:
@@ -53,13 +56,26 @@ def str2alg(str):
     str = str.lower()
     return alg_dict.get(str, None)
 
-def resize_img_folder(in_dir, out_dir, alg):
-    alg_val = str2alg(alg)
+def center_crop_arr(pil_image, image_size):
+    # We are not on a new enough PIL to support the reducing_gap
+    # argument, which uses BOX downsampling at powers of two first.
+    # Thus, we do it by hand to improve downsample quality.
+    while min(*pil_image.size) >= 2 * image_size:
+        pil_image = pil_image.resize(
+            tuple(x // 2 for x in pil_image.size), resample=Image.BOX
+        )
 
-    if alg_val is None:
-        print("Sorry but this algorithm (%s) is not available, use help for more info." % alg)
-        return
+    scale = image_size / min(*pil_image.size)
+    pil_image = pil_image.resize(
+        tuple(round(x * scale) for x in pil_image.size), resample=Image.BICUBIC
+    )
 
+    arr = np.array(pil_image)
+    crop_y = (arr.shape[0] - image_size) // 2
+    crop_x = (arr.shape[1] - image_size) // 2
+    return arr[crop_y : crop_y + image_size, crop_x : crop_x + image_size]
+
+def resize_img_folder(in_dir, out_dir, alg, size):
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
 
@@ -73,7 +89,9 @@ def resize_img_folder(in_dir, out_dir, alg):
             if im.mode != "RGB":
                 im = im.convert(mode="RGB")
 
-            im_resized = im.resize((size, size), alg_val)
+            # Apply center cropping to maintain aspect ratio without distortion
+            cropped_arr = center_crop_arr(im, size)
+            im_resized = Image.fromarray(cropped_arr)
             filename = os.path.splitext(filename)[0]
             output_path = os.path.join(out_dir, filename + '.png')
             im_resized.save(output_path)
@@ -100,10 +118,10 @@ if __name__ == '__main__':
         with tqdm(total=len(folders)) as pbar:  
             for i, folder in enumerate(folders):
                 if i % every_nth == 0 or repeat is True:
-                    resize_img_folder(os.path.join(in_dir, folder), os.path.join(out_dir, folder), alg_str)
+                    resize_img_folder(os.path.join(in_dir, folder), os.path.join(out_dir, folder), alg_str, size)
                 pbar.update(1)  
     else:
-        resize_img_folder(in_dir=in_dir, out_dir=out_dir, alg=alg_str)
+        resize_img_folder(in_dir=in_dir, out_dir=out_dir, alg=alg_str, size=size)
 
     pool.close()
     pool.join()

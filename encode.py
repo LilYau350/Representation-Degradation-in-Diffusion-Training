@@ -15,7 +15,7 @@ PngImagePlugin.MAX_TEXT_CHUNK = 1024 * (2 ** 20)  # 1024MB
 PngImagePlugin.MAX_TEXT_MEMORY = 128 * (2 ** 20)  # 128MB
 
 '''
-ImageNet_compressed.h5
+ImageNet.h5
 ├── train_latents  # Shape: (num_train_samples, latent_dim)
 ├── train_labels   # Shape: (num_train_samples,)
 ├── val_latents    # Shape: (num_val_samples, latent_dim)
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     train_loader, val_loader = load_imagenet(args.input, args.image_size, args.batch_size)
 
     # Save compressed latents and labels to HDF5
-    h5_file = os.path.join(args.output, "ImageNet_compressed.h5")
+    h5_file = os.path.join(args.output, "ImageNet.h5")
     with h5py.File(h5_file, 'w') as f:
         save_compressed_latents(train_loader, f, "train", device, vae)
         save_compressed_latents(val_loader, f, "val", device, vae)

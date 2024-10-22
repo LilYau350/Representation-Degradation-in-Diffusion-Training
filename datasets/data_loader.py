@@ -17,9 +17,6 @@ PngImagePlugin.MAX_TEXT_MEMORY = 128 * (2 ** 20)  # 128MB
 
 # Helper functions for cropping
 def center_crop_arr(pil_image, image_size):
-    if pil_image.size == (image_size, image_size):
-        return np.array(pil_image)
-
     while min(*pil_image.size) >= 2 * image_size:
         pil_image = pil_image.resize(
             tuple(x // 2 for x in pil_image.size), resample=Image.BOX
@@ -37,9 +34,6 @@ def center_crop_arr(pil_image, image_size):
 
 
 def random_crop_arr(pil_image, image_size, min_crop_frac=0.8, max_crop_frac=1.0):
-    if pil_image.size == (image_size, image_size):
-        return np.array(pil_image)
-
     min_smaller_dim_size = math.ceil(image_size / max_crop_frac)
     max_smaller_dim_size = math.ceil(image_size / min_crop_frac)
     smaller_dim_size = random.randrange(min_smaller_dim_size, max_smaller_dim_size + 1)

@@ -11,6 +11,7 @@ import h5py
 import math
 import random
 from PIL import Image, PngImagePlugin, ImageFile
+import functools
 
 Image.MAX_IMAGE_PIXELS = None
 PngImagePlugin.MAX_TEXT_CHUNK = 1024 * (2 ** 20)  # 1024MB
@@ -74,9 +75,12 @@ def initialize_vae():
     vae.eval()  # Set model to evaluation mode
     return vae
 
+def resize_transform(img, image_size):
+    return center_crop_arr(img, image_size)
+
 def load_imagenet(input, image_size, batch_size):
     transform = transforms.Compose([
-        transforms.Lambda(lambda img: center_crop_arr(img, image_size)),
+        transforms.Lambda(functools.partial(resize_transform, image_size=image_size)),
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
     ])
@@ -86,7 +90,7 @@ def load_imagenet(input, image_size, batch_size):
     val_dataset = datasets.ImageFolder(root=f"{input}/val", transform=transform)
     
     # Create DataLoader for batch processing
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
     
     return train_loader, val_loader
